@@ -20,12 +20,12 @@ pub fn init(alrm_handler: fn (i32) callconv(.C) void, bpm: u32) Self {
 
     const timerspec = linux.itimerspec{
         .it_interval = .{
-            .tv_sec = tv_sec,
-            .tv_nsec = tv_nsec,
+            .sec = tv_sec,
+            .nsec = tv_nsec,
         },
         .it_value = .{
-            .tv_sec = tv_sec,
-            .tv_nsec = tv_nsec,
+            .sec = tv_sec,
+            .nsec = tv_nsec,
         },
     };
 
@@ -41,12 +41,12 @@ pub fn setBpm(self: *Self, bpm: u32) void {
 
     const timerspec = linux.itimerspec{
         .it_interval = .{
-            .tv_sec = tv_sec,
-            .tv_nsec = tv_nsec,
+            .sec = tv_sec,
+            .nsec = tv_nsec,
         },
         .it_value = .{
-            .tv_sec = tv_sec,
-            .tv_nsec = tv_nsec,
+            .sec = tv_sec,
+            .nsec = tv_nsec,
         },
     };
 
