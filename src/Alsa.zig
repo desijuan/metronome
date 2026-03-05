@@ -1,8 +1,6 @@
 const std = @import("std");
 
-const c = @cImport({
-    @cInclude("alsa/asoundlib.h");
-});
+const c = @cImport(@cInclude("alsa/asoundlib.h"));
 
 sample_rate: u32,
 bits_per_sample: u8,
@@ -88,7 +86,7 @@ pub const Wav = struct {
     bits_per_sample: u16,
     channels: u16,
     frames: usize,
-    pcm_buffer: []u8,
+    pcm_buffer: []const u8,
 
     pub fn info(self: Wav) void {
         std.debug.print("sample_rate: {d}\n", .{self.sample_rate});
@@ -96,29 +94,28 @@ pub const Wav = struct {
         std.debug.print("channels: {d}\n", .{self.channels});
         std.debug.print("frames: {d}\n", .{self.frames});
     }
+
+    pub fn freeBuffer(self: Wav, allocator: std.mem.Allocator) void {
+        allocator.free(self.pcm_buffer);
+    }
 };
 
-const FileBufferedReader = std.io.BufferedReader(4096, std.fs.File.Reader);
-
 pub fn loadWav(self: Self, allocator: std.mem.Allocator, input_fp: []const u8) !Wav {
-    const input_file: std.fs.File = std.fs.cwd().openFile(input_fp, .{ .mode = .read_only }) catch |err| {
+    const input_file = std.fs.cwd().openFile(input_fp, .{ .mode = .read_only }) catch |err| {
         std.debug.print("Error opening file: {s}\n", .{input_fp});
         return err;
     };
+    defer input_file.close();
 
-    var file_br: FileBufferedReader = std.io.bufferedReader(input_file.reader());
-    const reader: FileBufferedReader.Reader = file_br.reader();
+    var file_buf: [4096]u8 = undefined;
+    var file_reader = input_file.reader(&file_buf);
+    const reader: *std.Io.Reader = &file_reader.interface;
 
-    var header: [Wav.HEADER_SIZE]u8 = undefined;
+    const header: []u8 = try reader.take(Wav.HEADER_SIZE);
 
-    var nread: usize = 0;
-
-    nread = try reader.read(&header);
-    if (nread != header.len) return error.ReadHeader;
-
-    const sample_rate: u32 = read_u32(&header, 24);
-    const bits_per_sample: u16 = read_u16(&header, 34);
-    const channels: u16 = read_u16(&header, 22);
+    const sample_rate: u32 = read_u32(header, 24);
+    const bits_per_sample: u16 = read_u16(header, 34);
+    const channels: u16 = read_u16(header, 22);
 
     if (sample_rate != self.sample_rate) return error.SampleRate;
     if (bits_per_sample != self.bits_per_sample) return error.BitsPerSample;
@@ -126,12 +123,7 @@ pub fn loadWav(self: Self, allocator: std.mem.Allocator, input_fp: []const u8) !
 
     const buffer_size = (try input_file.getEndPos()) - Wav.HEADER_SIZE;
 
-    const pcm_buffer = try allocator.alloc(u8, buffer_size);
-
-    nread = try reader.readAll(pcm_buffer);
-    if (nread != pcm_buffer.len) return error.BufferTooSmall;
-
-    input_file.close();
+    const pcm_buffer = try reader.readAlloc(allocator, buffer_size);
 
     const frames = 8 * buffer_size / (channels * bits_per_sample);
 

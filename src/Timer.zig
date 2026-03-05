@@ -5,10 +5,10 @@ bpm: u32,
 
 const Self = @This();
 
-pub fn init(alrm_handler: fn (i32) callconv(.C) void, bpm: u32) Self {
+pub fn init(alrm_handler: fn (i32) callconv(.c) void, bpm: u32) Self {
     const sa = linux.Sigaction{
         .handler = .{ .handler = alrm_handler },
-        .mask = linux.empty_sigset,
+        .mask = linux.sigemptyset(),
         .flags = 0,
     };
 

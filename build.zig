@@ -4,25 +4,28 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const metro_exe = b.addExecutable(.{
-        .name = "metronome",
+    const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
     });
 
-    metro_exe.linkSystemLibrary("asound");
+    const exe = b.addExecutable(.{
+        .name = "metronome",
+        .root_module = exe_mod,
+        .use_llvm = (optimize != .Debug),
+    });
 
-    b.installArtifact(metro_exe);
+    exe.linkSystemLibrary("asound");
 
-    const timer_run_cmd = b.addRunArtifact(metro_exe);
-    timer_run_cmd.step.dependOn(b.getInstallStep());
+    b.installArtifact(exe);
 
-    if (b.args) |args| {
-        timer_run_cmd.addArgs(args);
-    }
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
 
-    const timer_run_step = b.step("metro", "Run the metronome");
-    timer_run_step.dependOn(&timer_run_cmd.step);
+    if (b.args) |args| run_cmd.addArgs(args);
+
+    const run_step = b.step("run", "Run the metronome");
+    run_step.dependOn(&run_cmd.step);
 }

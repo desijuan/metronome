@@ -1,0 +1,12 @@
+.{
+    .name = .metronome,
+    .version = "1.0.0",
+    .fingerprint = 0xe378e8fc1c2d8faf, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
